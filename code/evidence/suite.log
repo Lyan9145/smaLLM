@@ -1,0 +1,141 @@
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python -m unittest discover -s tests -v
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python smoke_check.py --output /home/lyan/HKU/MP1_student_starter/code/evidence/cpu_gate.json
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python train.py --implementation model --config configs/baseline.json --run-dir /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/baseline --steps 200 --micro-batch-size 8 --grad-accum 2 --lr .001 --warmup 10 --betas .9 .95 --ema .9 --eval-every 100 --save-every 100 --threads 4 --precision fp32 --seed 17 --log-every 20 --dropout 0
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python evaluate.py --checkpoint /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/baseline/checkpoint.pt --split validation --device cpu --precision fp32 --threads 4 --output /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/baseline/validation_cpu_fp32.json
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python train.py --implementation student --config configs/student_matched.json --run-dir /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched --steps 200 --micro-batch-size 8 --grad-accum 2 --lr .001 --warmup 10 --betas .9 .95 --ema .9 --eval-every 100 --save-every 100 --threads 4 --precision fp32 --seed 17 --log-every 20 --dropout 0
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python evaluate.py --checkpoint /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched/checkpoint.pt --split validation --device cpu --precision fp32 --threads 4 --output /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched/validation_cpu_fp32.json
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python train.py --implementation student --config configs/student_matched_no_local.json --run-dir /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched_no_local --steps 200 --micro-batch-size 8 --grad-accum 2 --lr .001 --warmup 10 --betas .9 .95 --ema .9 --eval-every 100 --save-every 100 --threads 4 --precision fp32 --seed 17 --log-every 20 --dropout 0
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python evaluate.py --checkpoint /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched_no_local/checkpoint.pt --split validation --device cpu --precision fp32 --threads 4 --output /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_matched_no_local/validation_cpu_fp32.json
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python train.py --implementation student --config configs/student_8.json --run-dir /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_8 --steps 40 --micro-batch-size 2 --grad-accum 2 --lr .001 --warmup 10 --betas .9 .95 --ema .9 --eval-every 20 --save-every 20 --threads 4 --precision fp32 --seed 17 --log-every 20
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python evaluate.py --checkpoint /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_8/checkpoint.pt --split validation --device cpu --precision fp32 --threads 4 --output /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_8/validation_cpu_fp32.json
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python train.py --implementation student --config configs/student_10.json --run-dir /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_10 --steps 40 --micro-batch-size 2 --grad-accum 2 --lr .001 --warmup 10 --betas .9 .95 --ema .9 --eval-every 20 --save-every 20 --threads 4 --precision fp32 --seed 17 --log-every 20
+/home/lyan/HKU/MP1_student_starter/code/.venv/bin/python evaluate.py --checkpoint /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_10/checkpoint.pt --split validation --device cpu --precision fp32 --threads 4 --output /home/lyan/HKU/MP1_student_starter/code/runs/cpu-smoke/student_10/validation_cpu_fp32.json
+{
+  "scope": "CPU smoke only; no candidate test evaluation or long-run quality claim.",
+  "results": [
+    {
+      "config": "baseline",
+      "validation_bpb": 2.6746026519627635,
+      "initial_loss": 7.658194541931152,
+      "final_loss": 5.7001214027404785,
+      "train_tokens": 819200,
+      "train_seconds": 31.06962815199995,
+      "selected_weights": "raw",
+      "selected_step": 200,
+      "cpu_scoring_seconds": 5.780899091000265,
+      "inference_assets_mib": 5.169981002807617,
+      "baseline_time_ratio": 1.0,
+      "cpu_gate_passed": true
+    },
+    {
+      "config": "student_matched",
+      "validation_bpb": 2.6094890457586297,
+      "initial_loss": 7.6436567306518555,
+      "final_loss": 5.568857192993164,
+      "train_tokens": 819200,
+      "train_seconds": 36.546744626995405,
+      "selected_weights": "raw",
+      "selected_step": 200,
+      "cpu_scoring_seconds": 7.768253130000176,
+      "inference_assets_mib": 4.166759490966797,
+      "baseline_time_ratio": 1.3437794031198078,
+      "cpu_gate_passed": true
+    },
+    {
+      "config": "student_matched_no_local",
+      "validation_bpb": 2.60036705102477,
+      "initial_loss": 7.646159648895264,
+      "final_loss": 5.541546821594238,
+      "train_tokens": 819200,
+      "train_seconds": 35.412480667003365,
+      "selected_weights": "raw",
+      "selected_step": 200,
+      "cpu_scoring_seconds": 7.214679671999875,
+      "inference_assets_mib": 4.1567277908325195,
+      "baseline_time_ratio": 1.2480203439689386,
+      "cpu_gate_passed": true
+    },
+    {
+      "config": "student_8",
+      "validation_bpb": 3.0594390256079937,
+      "initial_loss": 7.639113426208496,
+      "final_loss": 6.4963226318359375,
+      "train_tokens": 40960,
+      "train_seconds": 8.556051613000818,
+      "selected_weights": "raw",
+      "selected_step": 40,
+      "cpu_scoring_seconds": 16.850877485999717,
+      "inference_assets_mib": 12.948712348937988,
+      "baseline_time_ratio": 2.9149233053095935,
+      "cpu_gate_passed": true
+    },
+    {
+      "config": "student_10",
+      "validation_bpb": 3.080794793503688,
+      "initial_loss": 7.666106224060059,
+      "final_loss": 6.525920867919922,
+      "train_tokens": 40960,
+      "train_seconds": 10.500932580001972,
+      "selected_weights": "raw",
+      "selected_step": 40,
+      "cpu_scoring_seconds": 20.876384102999964,
+      "inference_assets_mib": 15.840299606323242,
+      "baseline_time_ratio": 3.6112694192328028,
+      "cpu_gate_passed": true
+    }
+  ],
+  "random_weight_resource_gate": [
+    {
+      "config": "baseline",
+      "parameters": 1088256,
+      "inference_asset_bytes": 4355795,
+      "bpb": 3.6248003165076503,
+      "token_ppl": 2119.7433570050707,
+      "nll_nats": 2884390.6848039627,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 5.324552005999976,
+      "baseline_time_ratio": 1.0,
+      "resource_gate_passed": true
+    },
+    {
+      "config": "student_matched",
+      "parameters": 1088128,
+      "inference_asset_bytes": 4357708,
+      "bpb": 3.6160472825784207,
+      "token_ppl": 2080.8994571038215,
+      "nll_nats": 2877425.564707756,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 6.606873603999702,
+      "baseline_time_ratio": 1.2408318289603972,
+      "resource_gate_passed": true
+    },
+    {
+      "config": "student_8",
+      "parameters": 3387824,
+      "inference_asset_bytes": 13556492,
+      "bpb": 3.61993654358915,
+      "token_ppl": 2098.070423008956,
+      "nll_nats": 2880520.3967676163,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 16.036210665,
+      "baseline_time_ratio": 3.011748339941009,
+      "resource_gate_passed": true
+    },
+    {
+      "config": "student_10",
+      "parameters": 4144624,
+      "inference_asset_bytes": 16583692,
+      "bpb": 3.6184038234495186,
+      "token_ppl": 2091.286659447553,
+      "nll_nats": 2879300.7533922195,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 19.58176184299964,
+      "baseline_time_ratio": 3.6776355683884603,
+      "resource_gate_passed": true
+    }
+  ]
+}

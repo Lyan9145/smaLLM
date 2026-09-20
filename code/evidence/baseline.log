@@ -1,0 +1,87 @@
+{"step": 1, "loss": 7.658194541931152, "lr": 0.0001, "gradient_norm": 1.54673433303833, "seconds": 0.15132357799984675}
+{"step": 20, "loss": 6.654809951782227, "lr": 0.0009801068566592484, "gradient_norm": 0.5148062109947205, "seconds": 3.0404382590008936}
+{"step": 40, "loss": 6.381529331207275, "lr": 0.0009181673728412605, "gradient_norm": 0.4336271584033966, "seconds": 6.092594367000856}
+{"step": 60, "loss": 6.173372745513916, "lr": 0.0008201891013966478, "gradient_norm": 0.4547633230686188, "seconds": 9.075998289000381}
+{"step": 80, "loss": 5.979755878448486, "lr": 0.0006957628381891673, "gradient_norm": 0.5521221160888672, "seconds": 12.56827955700146}
+{"step": 100, "loss": 5.872574806213379, "lr": 0.0005570682927903193, "gradient_norm": 0.4506746232509613, "seconds": 15.773090251999292}
+{"validation": {"step": 100, "weights": "raw", "bpb": 2.779526435751321, "token_ppl": 355.3212167153415, "nll_nats": 2211774.293589711, "targets": 376599, "utf8_bytes": 1148007, "seconds": 5.376269695000246}}
+{"validation": {"step": 100, "weights": "ema", "bpb": 2.798281500969467, "token_ppl": 369.6848472728742, "nll_nats": 2226698.408212453, "targets": 376599, "utf8_bytes": 1148007, "seconds": 5.479326968999885}}
+{"step": 120, "loss": 5.772787570953369, "lr": 0.0004176818536454633, "gradient_norm": 0.5486211180686951, "seconds": 18.797365600000376}
+{"step": 140, "loss": 5.655211448669434, "lr": 0.0002912476365805247, "gradient_norm": 0.693834125995636, "seconds": 21.80830739500061}
+{"step": 160, "loss": 5.660189151763916, "lr": 0.00019014190368080925, "gradient_norm": 0.48176783323287964, "seconds": 24.844407850001062}
+{"step": 180, "loss": 5.6165595054626465, "lr": 0.00012426158852760463, "gradient_norm": 0.59991055727005, "seconds": 27.91490304599938}
+{"step": 200, "loss": 5.7001214027404785, "lr": 0.00010005551538325275, "gradient_norm": 0.50213223695755, "seconds": 31.06962815199995}
+{"validation": {"step": 200, "weights": "raw", "bpb": 2.6746026519627635, "token_ppl": 284.6677421113517, "nll_nats": 2128282.4711034223, "targets": 376599, "utf8_bytes": 1148007, "seconds": 5.463173711000309}}
+{"validation": {"step": 200, "weights": "ema", "bpb": 2.6772347749334853, "token_ppl": 286.25535093856996, "nll_nats": 2130376.95088578, "targets": 376599, "utf8_bytes": 1148007, "seconds": 5.4271099309999045}}
+{
+  "protocol": "7506-mp1-wt2-v2",
+  "implementation": "model",
+  "config": {
+    "vocab": 2048,
+    "width": 128,
+    "heads": 4,
+    "depth": 4,
+    "context": 256
+  },
+  "seed": 17,
+  "recipe": {
+    "steps": 200,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "lr": 0.001,
+    "warmup": 10,
+    "min_lr_ratio": 0.1,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "weight_decay": 0.1,
+    "ema": 0.9,
+    "seed": 17,
+    "eval_every": 100,
+    "tf32": false,
+    "precision": "fp32",
+    "device_type": "cpu",
+    "threads": 4
+  },
+  "updates": 200,
+  "completed_budget": true,
+  "parameters": 1088256,
+  "precision": "fp32",
+  "train_tokens": 819200,
+  "processed_targets": 819200,
+  "preparation_seconds": 7.9383194929996534,
+  "train_seconds": 31.06962815199995,
+  "validation": {
+    "bpb": 2.6746026519627635,
+    "token_ppl": 284.6677421113517,
+    "nll_nats": 2128282.4711034223,
+    "targets": 376599,
+    "utf8_bytes": 1148007,
+    "seconds": 5.463173711000309
+  },
+  "selected_step": 200,
+  "selected_weights": "raw",
+  "intermediate_validation_seconds": 21.745880306000345,
+  "process_seconds": 60.82607743599965,
+  "segment_process_seconds": 60.8260783679998,
+  "torch_version": "2.7.1+cpu",
+  "threads": 4,
+  "ancestry": [],
+  "parent_checkpoint": null,
+  "checkpoint_sha256": "e8270a717c0606aae269197c6d4fde8925f313299164c9b2756f3aaf4662a246",
+  "implementation_sha256": "6cce142a31d396f017319543f50d70f30fa6da740729af01c8baed13c6f671f9",
+  "inference_asset_bytes": 4355864,
+  "serialized_inference_asset_bytes": 5421118,
+  "code_commit": "bf4e2e8cc50294a6265936a68e11d8207419b30a",
+  "code_dirty": true,
+  "cpu": "AMD Ryzen AI 9 H 465 w/ Radeon 880M",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "cuda_version": null,
+  "peak_cpu_ram_gib": 1.8421669006347656,
+  "device": "cpu",
+  "device_name": "CPU",
+  "peak_allocated_gb": 0.0,
+  "peak_reserved_gb": 0.0
+}

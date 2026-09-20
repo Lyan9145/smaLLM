@@ -1,0 +1,2 @@
+# Keep CSV experiment logs normalized in Git across Python/OS newline defaults.
+*.csv text eol=lf

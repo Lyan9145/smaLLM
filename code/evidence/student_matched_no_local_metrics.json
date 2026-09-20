@@ -1,0 +1,213 @@
+{
+  "protocol": "7506-mp1-wt2-v2",
+  "implementation": "student",
+  "config": {
+    "vocab": 2048,
+    "context": 256,
+    "depth": 4,
+    "width": 128,
+    "heads": 4,
+    "hidden_width": 365,
+    "dropout": 0.0,
+    "local_mixing": false,
+    "local_kernel": 3
+  },
+  "seed": 17,
+  "recipe": {
+    "steps": 200,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "lr": 0.001,
+    "warmup": 10,
+    "min_lr_ratio": 0.1,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "weight_decay": 0.1,
+    "ema": 0.9,
+    "seed": 17,
+    "eval_every": 100,
+    "tf32": false,
+    "precision": "fp32",
+    "device_type": "cpu",
+    "threads": 4
+  },
+  "updates": 200,
+  "completed_budget": true,
+  "parameters": 1086080,
+  "precision": "fp32",
+  "train_tokens": 819200,
+  "processed_targets": 819200,
+  "preparation_seconds": 7.593884028000048,
+  "train_seconds": 35.412480667003365,
+  "validation": {
+    "bpb": 2.60036705102477,
+    "token_ppl": 243.34154388156463,
+    "nll_nats": 2069210.3961945698,
+    "targets": 376599,
+    "utf8_bytes": 1148007,
+    "seconds": 6.803654433999782
+  },
+  "history": [
+    {
+      "step": 1,
+      "loss": 7.646159648895264,
+      "lr": 0.0001,
+      "gradient_norm": 0.7990493774414062,
+      "seconds": 0.16304509600013262
+    },
+    {
+      "step": 20,
+      "loss": 6.655289649963379,
+      "lr": 0.0009801068566592484,
+      "gradient_norm": 0.5305209755897522,
+      "seconds": 3.3866176480009926
+    },
+    {
+      "step": 40,
+      "loss": 6.340749740600586,
+      "lr": 0.0009181673728412605,
+      "gradient_norm": 0.3712998032569885,
+      "seconds": 7.113704298001721
+    },
+    {
+      "step": 60,
+      "loss": 6.087973594665527,
+      "lr": 0.0008201891013966478,
+      "gradient_norm": 0.6341458559036255,
+      "seconds": 11.012678061002589
+    },
+    {
+      "step": 80,
+      "loss": 5.895047187805176,
+      "lr": 0.0006957628381891673,
+      "gradient_norm": 0.49508920311927795,
+      "seconds": 14.549775156001942
+    },
+    {
+      "step": 100,
+      "loss": 5.759474277496338,
+      "lr": 0.0005570682927903193,
+      "gradient_norm": 0.532542884349823,
+      "seconds": 18.140648727002826
+    },
+    {
+      "step": 120,
+      "loss": 5.658481597900391,
+      "lr": 0.0004176818536454633,
+      "gradient_norm": 0.5281729102134705,
+      "seconds": 21.508634453003197
+    },
+    {
+      "step": 140,
+      "loss": 5.517066955566406,
+      "lr": 0.0002912476365805247,
+      "gradient_norm": 0.5141978859901428,
+      "seconds": 24.966848828003094
+    },
+    {
+      "step": 160,
+      "loss": 5.519388198852539,
+      "lr": 0.00019014190368080925,
+      "gradient_norm": 0.5162908434867859,
+      "seconds": 28.305721661002735
+    },
+    {
+      "step": 180,
+      "loss": 5.47396183013916,
+      "lr": 0.00012426158852760463,
+      "gradient_norm": 0.571671187877655,
+      "seconds": 31.891861979003806
+    },
+    {
+      "step": 200,
+      "loss": 5.541546821594238,
+      "lr": 0.00010005551538325275,
+      "gradient_norm": 0.5779200792312622,
+      "seconds": 35.412480667003365
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 100,
+      "weights": "raw",
+      "bpb": 2.732143744756897,
+      "token_ppl": 321.4701158295285,
+      "nll_nats": 2174070.0945741534,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 6.738453573000243
+    },
+    {
+      "step": 100,
+      "weights": "ema",
+      "bpb": 2.7552155867191352,
+      "token_ppl": 337.5300072554516,
+      "nll_nats": 2192429.2316924334,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 6.8372141539998665
+    },
+    {
+      "step": 200,
+      "weights": "raw",
+      "bpb": 2.60036705102477,
+      "token_ppl": 243.34154388156463,
+      "nll_nats": 2069210.3961945698,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 6.803654433999782
+    },
+    {
+      "step": 200,
+      "weights": "ema",
+      "bpb": 2.603328232006779,
+      "token_ppl": 244.86886870943363,
+      "nll_nats": 2071566.7198799402,
+      "targets": 376599,
+      "utf8_bytes": 1148007,
+      "seconds": 6.5727751770000395
+    }
+  ],
+  "selected_step": 200,
+  "selected_weights": "raw",
+  "intermediate_validation_seconds": 26.95209733799993,
+  "process_seconds": 70.02620993699975,
+  "segment_process_seconds": 70.02621076200012,
+  "torch_version": "2.7.1+cpu",
+  "threads": 4,
+  "ancestry": [],
+  "parent_checkpoint": null,
+  "checkpoint_sha256": "cbdfabbe18d43069a64835d90b0e3f8ebafc3b882e5fc677d91498abb7c18d5e",
+  "implementation_sha256": "0e4a2fba5131c6660f354558ba0f82e9a2724b7019f9899f684353e3677be453",
+  "inference_asset_bytes": 4349664,
+  "serialized_inference_asset_bytes": 4358645,
+  "code_commit": "bf4e2e8cc50294a6265936a68e11d8207419b30a",
+  "code_dirty": true,
+  "source_sha256": {
+    "common.py": "d40dc1fe6578b5993a563bdb4d9e5317ddc9fae8afe48822b66571c7042e84db",
+    "evaluate.py": "128bcb2dab0be0d427505bddb4671e3ab3a8f78e114be79a689c0f9029af133d",
+    "model.py": "6cce142a31d396f017319543f50d70f30fa6da740729af01c8baed13c6f671f9",
+    "run_cpu_smoke.py": "472c0fb74b71538b27cdd618ecdad4de769af45f1065838ea3a568b5d096d462",
+    "smoke_check.py": "96cd815882bbffe29880da054e02eeb9b331e9a5a3cbcee7baf4c37827355eae",
+    "student.py": "0e4a2fba5131c6660f354558ba0f82e9a2724b7019f9899f684353e3677be453",
+    "student_model.py": "cd98187787bc2e73fcfd862a9cf475a0fec2190c65ebba4c78f3cff2a8841d1f",
+    "train.py": "65846d2676df1dd42d5303d86ca85c0d68e24ed5f3a76fa3d5f5aeb4008ee9c4",
+    "training_utils.py": "0076671f916ca62d4be1bc649702565fe221376aa5a1e4c72443ac9b67197622",
+    "configs/baseline.json": "6b0c87aa8e15107b78d9789b8f254559735eb0eee81f941715bcc216bdb09e7d",
+    "configs/student_10.json": "6df3f62351e9ffa69e08dd197a8a93cb3cef55bed80f76df29498190c39c3984",
+    "configs/student_8.json": "3b1b12ac2ecf59e6afb1827b05488cccbfb80d518f3cc1c015adaac2fcf689e1",
+    "configs/student_matched.json": "790803b3755b1ee697791236e169f0342213c521a84e00e7c52aa5bb3b6aa7d1",
+    "configs/student_matched_no_local.json": "085dad09212782c53f5ad62cc6ce11dfd675e4807c746b1201cf0d7b019c8897"
+  },
+  "cpu": "AMD Ryzen AI 9 H 465 w/ Radeon 880M",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "cuda_version": null,
+  "peak_cpu_ram_gib": 1.8416786193847656,
+  "device": "cpu",
+  "device_name": "CPU",
+  "peak_allocated_gb": 0.0,
+  "peak_reserved_gb": 0.0
+}
