@@ -11,6 +11,29 @@ import subprocess
 import torch
 
 
+def initialize_from_checkpoint(model, path, implementation, config):
+    """Load selected self-trained weights, without silently resuming an optimizer.
+
+    Costs describe the complete parent training run, not just its selected step.
+    Teacher costs are disclosed separately (they are not student update counts).
+    """
+    from common import PROTOCOL, sha
+    path = Path(path)
+    saved = torch.load(path, map_location='cpu', weights_only=True)
+    if (saved.get('protocol') != PROTOCOL or saved.get('implementation') != implementation
+            or saved.get('config') != config):
+        raise ValueError('Warm-start must retain protocol, implementation and config.')
+    if 'optimizer' in saved or 'selected_step' not in saved:
+        raise ValueError('Use a selected checkpoint.pt for warm-start, not recovery state.')
+    count = saved.get('processed_targets_including_ancestry', saved.get('train_tokens'))
+    if type(count) is not int or count < 0:
+        raise ValueError('Warm-start checkpoint must record its processed training targets.')
+    model.load_state_dict(saved['model'])
+    return dict(path=str(path.resolve()), sha256=sha(path),
+                processed_targets_including_ancestry=count,
+                selected_step=saved['selected_step'], selected_weights=saved.get('selected_weights'))
+
+
 def cpu_state(model):
     return {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
 
@@ -79,7 +102,8 @@ def append_run_log(path, metrics, config_path, run_dir):
     row = dict(run_id=str(run_dir), code_commit=metrics['code_commit'], method=metrics['implementation'],
                config_path=str(config_path), seed=metrics['seed'], parent_checkpoints=json.dumps(metrics['ancestry']),
                steps=metrics['updates'], batch_size=metrics['recipe']['batch_size'] * metrics['recipe']['grad_accum'],
-               context=256, processed_targets_including_ancestry=metrics['train_tokens'],
+               context=256, processed_targets_including_ancestry=metrics.get(
+                   'processed_targets_including_ancestry', metrics['train_tokens']),
                parameters=metrics['parameters'], hardware=metrics['cpu'] + ' / ' + metrics['device_name'],
                threads=metrics['threads'], train_precision=metrics['precision'], train_seconds=metrics['train_seconds'],
                validation_seconds=metrics['validation']['seconds'], peak_ram_gb=metrics['peak_cpu_ram_gib'] * 2**30 / 1e9,

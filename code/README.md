@@ -150,6 +150,46 @@ implement dropout, and the trainer rejects a nonzero baseline dropout override
 rather than silently ignoring it. Choose an explicit student config: the
 legacy default config remains `configs/baseline.json` for command compatibility.
 
+### Distillation and optional MoE experiments
+
+The trainer supports training-only teacher distillation. The teacher is loaded
+from a checkpoint, frozen, and evaluated only on sampled training spans; the
+submitted student checkpoint does not contain or require the teacher:
+
+```bash
+python train.py --implementation student --config configs/student_8.json \
+  --teacher-checkpoint runs/teacher/checkpoint.pt \
+  --distill-temperature 2 --distill-alpha .4 \
+  --device cuda --precision bf16 --tf32 --threads 4 \
+  --micro-batch-size 32 --grad-accum 4 --updates 3052 \
+  --lr .0015 --warmup 122 --ema .99 --eval-every 100 \
+  --run-dir runs/distilled-student
+```
+
+The teacher must itself be trained only on the supplied training text. Record
+its checkpoint hash, configuration, and training cost. Select the student by
+validation BPB; never use teacher outputs from validation or test.
+
+`student_moe` implements deterministic causal top-1 routing with no token
+dropping. `configs/student_moe_8_compact.json` is the recommended first test;
+the larger two-expert and four-expert configurations measure capacity versus
+CPU routing overhead:
+
+```bash
+python train.py --implementation student_moe \
+  --config configs/student_moe_8_compact.json \
+  --device cuda --precision bf16 --tf32 --threads 4 \
+  --micro-batch-size 32 --grad-accum 4 --updates 916 \
+  --lr .0015 --warmup 36 --ema .99 --eval-every 100 \
+  --run-dir runs/moe-8-compact
+```
+
+Run the fixed FP32 CPU evaluator for each candidate and reject it if it breaks
+the five-times baseline time, 4 GiB RAM, or 64 MiB asset limits. The
+`speculative.py` utility is for separate autoregressive generation experiments;
+speculative decoding cannot accelerate this scorer because it requires
+probabilities at every position of every independent window.
+
 Run the full local smoke suite (several minutes on a recent CPU):
 
 ```bash
@@ -174,6 +214,31 @@ and logs are committed; a final trained checkpoint still needs to be bundled
 after the longer validation-selected experiments in `../Plan.md`.
 
 ### Training controls and recovery
+
+For a new low-learning-rate phase, use `--init-checkpoint PATH/checkpoint.pt`.
+This loads selected weights from an internally trained checkpoint with the same
+implementation/configuration, then starts a **new** optimizer, schedule, sampler
+and EMA. It does not extend an old cosine schedule through `--resume`. The
+initial weights remain eligible for validation selection if further training
+does not help. `--resume` and `--init-checkpoint` are mutually exclusive; exact
+resume still requires identical source and recipe.
+
+`processed_targets` in metrics counts the current recipe (including recovered
+segments); `processed_targets_including_ancestry` additionally includes warm-start
+parents, without double-counting exact-resume segments. Teacher checkpoint costs
+are disclosed separately. Inference checkpoints carry the cumulative student
+target count so further warm-start phases retain this accounting.
+
+`../scripts/gpu_dense_search.py` runs a bounded 11-candidate dense-only search
+with up to three concurrent GPU jobs. It uses the existing best self-distilled
+student as a new training-only teacher, plus its original teacher for controls.
+After all GPU jobs finish, it runs CPU/FP32 validation sequentially (three fresh
+processes per checkpoint), measuring the baseline on the same host and reporting
+peak process RAM, serialized inference assets, and timing ratios. It never scores
+test. `plan.json`, `commands.jsonl`, parent provenance, source hashes, per-job
+logs, and GPU telemetry preserve the search cost and reproduction evidence.
+Create `STOP` in its output directory to terminate its workers gracefully.
+The warm-start support and search orchestration were developed with AI assistance.
 
 The original `--implementation model --steps 1200 --batch-size 32` recipe
 retains its LR formula, sampler, optimizer defaults, and 9,830,400-target budget.

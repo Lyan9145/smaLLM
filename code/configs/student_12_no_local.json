@@ -1,0 +1,11 @@
+{
+  "vocab": 2048,
+  "context": 256,
+  "depth": 12,
+  "width": 176,
+  "heads": 4,
+  "hidden_width": 480,
+  "dropout": 0.05,
+  "local_mixing": false,
+  "local_kernel": 3
+}

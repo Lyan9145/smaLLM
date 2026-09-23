@@ -10,8 +10,10 @@ from torch.nn import functional as F
 
 from common import PROTOCOL, ROOT, autocast, device_metrics, load_data, make_model, setup, sha
 from evaluate import score
+from distillation import distillation_loss
 from training_utils import (append_run_log, atomic_save, cpu_state, hardware_metadata,
-                            inference_asset_bytes, select_candidate, source_metadata, update_ema)
+                            inference_asset_bytes, initialize_from_checkpoint, select_candidate,
+                            source_metadata, update_ema)
 
 
 def learning_rate(step, recipe):
@@ -43,11 +45,21 @@ def parse_args():
     p.add_argument('--eval-every', '--validation-interval', type=int, default=0)
     p.add_argument('--ema', type=float, default=0., help='EMA decay; 0 disables EMA.')
     p.add_argument('--save-every', '--save-interval', type=int, default=0)
-    p.add_argument('--resume', type=Path)
+    initialization = p.add_mutually_exclusive_group()
+    initialization.add_argument('--resume', type=Path)
+    initialization.add_argument('--init-checkpoint', type=Path,
+                                help='Warm-start selected weights with a NEW optimizer/schedule; not exact recovery.')
     p.add_argument('--stop-after', type=int, help='Stop this segment at an update, preserving the full schedule.')
     p.add_argument('--log-every', type=int, default=100)
     p.add_argument('--run-log', type=Path, default=ROOT/'RUN_LOG_TEMPLATE.csv')
     p.add_argument('--tf32', action='store_true', help='Permit TF32 for CUDA training only.')
+    p.add_argument('--teacher-checkpoint', type=Path,
+                   help='Optional frozen checkpoint used only for training-time distillation.')
+    p.add_argument('--distill-temperature', type=float, default=2.0)
+    p.add_argument('--distill-alpha', type=float, default=0.0,
+                   help='Soft-teacher loss weight; 0 disables distillation.')
+    p.add_argument('--moe-aux-weight', type=float,
+                   help='Override the MoE load-balance loss weight in the config.')
     args = p.parse_args()
     if min(args.batch_size, args.grad_accum, args.threads, args.log_every) < 1:
         p.error('Batch size, accumulation, threads and log interval must be positive.')
@@ -84,9 +96,47 @@ def main():
     config = json.loads(args.config.read_text())
     if args.dropout is not None and args.implementation != 'model':
         config['dropout'] = args.dropout
+    if args.moe_aux_weight is not None:
+        if args.implementation != 'student_moe':
+            raise ValueError('--moe-aux-weight requires --implementation student_moe')
+        config['moe_aux_weight'] = args.moe_aux_weight
+    if not (0 <= args.distill_alpha <= 1 and args.distill_temperature > 0 and
+            math.isfinite(args.distill_temperature)):
+        raise ValueError('Distillation alpha must be in [0, 1] and temperature positive.')
+    if args.distill_alpha > 0 and args.teacher_checkpoint is None:
+        raise ValueError('--distill-alpha > 0 requires --teacher-checkpoint')
+    if args.teacher_checkpoint is not None and not args.teacher_checkpoint.is_file():
+        raise ValueError('--teacher-checkpoint must point to a checkpoint file')
     model, implementation_sha = make_model(args.implementation, config, device)
+    initialization_metadata = None
+    inherited_targets = 0
+    if args.init_checkpoint:
+        initialization_metadata = initialize_from_checkpoint(
+            model, args.init_checkpoint, args.implementation, config)
+        inherited_targets = initialization_metadata['processed_targets_including_ancestry']
+    teacher = None
+    teacher_metadata = None
+    if args.teacher_checkpoint is not None:
+        teacher_state = torch.load(args.teacher_checkpoint, map_location='cpu', weights_only=True)
+        if teacher_state.get('protocol') != PROTOCOL:
+            raise ValueError('Teacher checkpoint belongs to a different course protocol.')
+        teacher, teacher_sha = make_model(teacher_state['implementation'], teacher_state['config'], device)
+        teacher.load_state_dict(teacher_state['model'])
+        teacher.eval()
+        for parameter in teacher.parameters():
+            parameter.requires_grad_(False)
+        teacher_metadata = dict(path=str(args.teacher_checkpoint.resolve()),
+                                checkpoint_sha256=sha(args.teacher_checkpoint),
+                                implementation=teacher_state['implementation'],
+                                implementation_sha256=teacher_sha,
+                                config=teacher_state['config'],
+                                processed_targets_including_ancestry=teacher_state.get(
+                                    'processed_targets_including_ancestry', teacher_state.get('train_tokens')))
     recipe = {key: getattr(args, key) for key in ('steps', 'batch_size', 'grad_accum', 'lr', 'warmup',
-              'min_lr_ratio', 'betas', 'weight_decay', 'ema', 'seed', 'eval_every', 'tf32')}
+              'min_lr_ratio', 'betas', 'weight_decay', 'ema', 'seed', 'eval_every', 'tf32',
+              'distill_temperature', 'distill_alpha', 'moe_aux_weight')}
+    recipe.update(teacher_checkpoint_sha256=(teacher_metadata or {}).get('checkpoint_sha256'),
+                  teacher_implementation=(teacher_metadata or {}).get('implementation'))
     recipe.update(precision=precision, device_type=device.type, threads=args.threads)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=tuple(args.betas), weight_decay=args.weight_decay)
     tokens = data['train'][0].to(device)
@@ -95,6 +145,8 @@ def main():
     ema_model = make_model(args.implementation, config, device)[0] if args.ema else None
     metadata = source_metadata(ROOT)
     start, history, validation_history, best, ancestry = 0, [], [], None, []
+    if initialization_metadata is not None:
+        ancestry.append(dict(kind='warm_start', **initialization_metadata))
     previous_train_seconds = previous_process_seconds = intermediate_validation_seconds = 0.
     if args.resume:
         saved = torch.load(args.resume, map_location='cpu', weights_only=True)
@@ -117,6 +169,8 @@ def main():
         previous_train_seconds = saved['train_seconds']
         previous_process_seconds = saved['process_seconds']
         intermediate_validation_seconds = saved['validation_seconds']
+        initialization_metadata = saved.get('initialization')
+        inherited_targets = saved.get('inherited_targets', 0)
         ancestry = saved['ancestry'] + [dict(path=str(args.resume.resolve()), sha256=sha(args.resume),
                                             updates=start, train_tokens=start * args.batch_size * args.grad_accum * 256)]
     end = args.stop_after or args.steps
@@ -147,6 +201,8 @@ def main():
         atomic_save(dict(protocol=PROTOCOL, implementation=args.implementation, config=config,
                          recipe=recipe, source_sha256=metadata['source_sha256'], model=cpu_state(model),
                          optimizer=optimizer.state_dict(), ema=ema, best=best, update=update,
+                         teacher=teacher_metadata,
+                         initialization=initialization_metadata, inherited_targets=inherited_targets,
                          scheduler=dict(next_update=update, recipe=recipe), sampler_rng=rng.get_state(),
                          torch_rng=torch.get_rng_state(),
                          cuda_rng=torch.cuda.get_rng_state_all() if device.type == 'cuda' else [],
@@ -154,6 +210,10 @@ def main():
                          train_seconds=train_seconds, validation_seconds=intermediate_validation_seconds,
                          process_seconds=previous_process_seconds + time.perf_counter() - total_started),
                     args.run_dir/'resume.pt')
+
+    # Keep the parent as an eligible candidate: a continuation need not improve.
+    if args.init_checkpoint:
+        validate(0)
 
     for step in range(start, end):
         tick = time.perf_counter()
@@ -168,7 +228,19 @@ def main():
             starts = torch.randint(len(tokens)-257, (args.batch_size,), generator=rng).to(device)
             batch = tokens[starts[:, None] + offsets]
             with autocast(device, precision):
-                loss = F.cross_entropy(model(batch[:, :-1]).flatten(0, 1).float(), batch[:, 1:].flatten())
+                student_logits = model(batch[:, :-1])
+                if teacher is not None and args.distill_alpha > 0:
+                    with torch.no_grad():
+                        teacher_logits = teacher(batch[:, :-1])
+                    loss, hard_loss, soft_loss = distillation_loss(
+                        student_logits, teacher_logits, batch[:, 1:],
+                        args.distill_temperature, args.distill_alpha)
+                else:
+                    hard_loss = F.cross_entropy(student_logits.flatten(0, 1).float(), batch[:, 1:].flatten())
+                    soft_loss = torch.zeros_like(hard_loss)
+                    loss = hard_loss
+                aux_loss = getattr(model, 'aux_loss', student_logits.new_zeros(()))
+                loss = loss + aux_loss
             if not torch.isfinite(loss):
                 raise RuntimeError(f'Nonfinite loss at update {step + 1}')
             (loss / args.grad_accum).backward()
@@ -190,24 +262,36 @@ def main():
             save_resume(step + 1)
 
     train_tokens = end * args.batch_size * args.grad_accum * 256
+    total_targets = inherited_targets + train_tokens
     checkpoint = args.run_dir/'checkpoint.pt'
     atomic_save(dict(protocol=PROTOCOL, implementation=args.implementation, config=config,
-                     model=best['model'], seed=args.seed, train_tokens=train_tokens,
+                     model=best['model'], seed=args.seed, train_tokens=total_targets,
+                     processed_targets_including_ancestry=total_targets,
+                     initialization=initialization_metadata,
                      selected_step=best['step'], selected_weights=best['weights']), checkpoint)
     model.load_state_dict(best['model'])
-    source_paths = [ROOT/'student.py', ROOT/'student_model.py'] if args.implementation == 'student' else [ROOT/'model.py']
+    if args.implementation == 'student':
+        source_paths = [ROOT/'student.py', ROOT/'student_model.py']
+    elif args.implementation == 'student_moe':
+        source_paths = [ROOT/'student_moe.py', ROOT/'moe_model.py', ROOT/'student_model.py']
+    else:
+        source_paths = [ROOT/'model.py']
     asset_bytes = inference_asset_bytes(model, source_paths) + len(json.dumps(config).encode())
     result = dict(protocol=PROTOCOL, implementation=args.implementation, config=config, seed=args.seed,
                   recipe=recipe, updates=end, completed_budget=end == args.steps,
                   parameters=sum(p.numel() for p in model.parameters()), precision=precision,
                   train_tokens=train_tokens, processed_targets=train_tokens, preparation_seconds=preparation_seconds,
+                  processed_targets_including_ancestry=total_targets, inherited_targets=inherited_targets,
                   train_seconds=train_seconds, validation=best['validation'], history=history,
                   validation_history=validation_history, selected_step=best['step'], selected_weights=best['weights'],
                   intermediate_validation_seconds=intermediate_validation_seconds,
                   process_seconds=previous_process_seconds + time.perf_counter() - total_started,
                   segment_process_seconds=time.perf_counter() - total_started,
                   torch_version=str(torch.__version__), threads=args.threads, ancestry=ancestry,
-                  parent_checkpoint=str(args.resume.resolve()) if args.resume else None,
+                  teacher=teacher_metadata,
+                  initialization=initialization_metadata,
+                  parent_checkpoint=(str(args.resume.resolve()) if args.resume else
+                                     (initialization_metadata or {}).get('path')),
                   checkpoint_sha256=sha(checkpoint), implementation_sha256=implementation_sha,
                   inference_asset_bytes=asset_bytes,
                   serialized_inference_asset_bytes=checkpoint.stat().st_size + sum(p.stat().st_size for p in source_paths) + len(json.dumps(config).encode()),
