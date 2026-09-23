@@ -150,7 +150,7 @@ implement dropout, and the trainer rejects a nonzero baseline dropout override
 rather than silently ignoring it. Choose an explicit student config: the
 legacy default config remains `configs/baseline.json` for command compatibility.
 
-### Distillation and optional MoE experiments
+### Distillation experiments
 
 The trainer supports training-only teacher distillation. The teacher is loaded
 from a checkpoint, frozen, and evaluated only on sampled training spans; the
@@ -170,25 +170,10 @@ The teacher must itself be trained only on the supplied training text. Record
 its checkpoint hash, configuration, and training cost. Select the student by
 validation BPB; never use teacher outputs from validation or test.
 
-`student_moe` implements deterministic causal top-1 routing with no token
-dropping. `configs/student_moe_8_compact.json` is the recommended first test;
-the larger two-expert and four-expert configurations measure capacity versus
-CPU routing overhead:
-
-```bash
-python train.py --implementation student_moe \
-  --config configs/student_moe_8_compact.json \
-  --device cuda --precision bf16 --tf32 --threads 4 \
-  --micro-batch-size 32 --grad-accum 4 --updates 916 \
-  --lr .0015 --warmup 36 --ema .99 --eval-every 100 \
-  --run-dir runs/moe-8-compact
-```
-
 Run the fixed FP32 CPU evaluator for each candidate and reject it if it breaks
-the five-times baseline time, 4 GiB RAM, or 64 MiB asset limits. The
-`speculative.py` utility is for separate autoregressive generation experiments;
-speculative decoding cannot accelerate this scorer because it requires
-probabilities at every position of every independent window.
+the five-times baseline time, 4 GiB RAM, or 64 MiB asset limits. Speculative
+decoding is not part of the scored implementation because this evaluator
+requires probabilities at every position of every independent window.
 
 Run the full local smoke suite (several minutes on a recent CPU):
 
