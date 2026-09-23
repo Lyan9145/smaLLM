@@ -214,16 +214,9 @@ parents, without double-counting exact-resume segments. Teacher checkpoint costs
 are disclosed separately. Inference checkpoints carry the cumulative student
 target count so further warm-start phases retain this accounting.
 
-`../scripts/gpu_dense_search.py` runs a bounded 11-candidate dense-only search
-with up to three concurrent GPU jobs. It uses the existing best self-distilled
-student as a new training-only teacher, plus its original teacher for controls.
-After all GPU jobs finish, it runs CPU/FP32 validation sequentially (three fresh
-processes per checkpoint), measuring the baseline on the same host and reporting
-peak process RAM, serialized inference assets, and timing ratios. It never scores
-test. `plan.json`, `commands.jsonl`, parent provenance, source hashes, per-job
-logs, and GPU telemetry preserve the search cost and reproduction evidence.
-Create `STOP` in its output directory to terminate its workers gracefully.
-The warm-start support and search orchestration were developed with AI assistance.
+The warm-start support and search orchestration used during development were
+developed with AI assistance. Preserve the exact commands, teacher checkpoint
+hashes and validation evidence for the final report.
 
 The original `--implementation model --steps 1200 --batch-size 32` recipe
 retains its LR formula, sampler, optimizer defaults, and 9,830,400-target budget.

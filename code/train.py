@@ -58,8 +58,6 @@ def parse_args():
     p.add_argument('--distill-temperature', type=float, default=2.0)
     p.add_argument('--distill-alpha', type=float, default=0.0,
                    help='Soft-teacher loss weight; 0 disables distillation.')
-    p.add_argument('--moe-aux-weight', type=float,
-                   help='Override the MoE load-balance loss weight in the config.')
     args = p.parse_args()
     if min(args.batch_size, args.grad_accum, args.threads, args.log_every) < 1:
         p.error('Batch size, accumulation, threads and log interval must be positive.')
@@ -96,10 +94,6 @@ def main():
     config = json.loads(args.config.read_text())
     if args.dropout is not None and args.implementation != 'model':
         config['dropout'] = args.dropout
-    if args.moe_aux_weight is not None:
-        if args.implementation != 'student_moe':
-            raise ValueError('--moe-aux-weight requires --implementation student_moe')
-        config['moe_aux_weight'] = args.moe_aux_weight
     if not (0 <= args.distill_alpha <= 1 and args.distill_temperature > 0 and
             math.isfinite(args.distill_temperature)):
         raise ValueError('Distillation alpha must be in [0, 1] and temperature positive.')
@@ -134,7 +128,7 @@ def main():
                                     'processed_targets_including_ancestry', teacher_state.get('train_tokens')))
     recipe = {key: getattr(args, key) for key in ('steps', 'batch_size', 'grad_accum', 'lr', 'warmup',
               'min_lr_ratio', 'betas', 'weight_decay', 'ema', 'seed', 'eval_every', 'tf32',
-              'distill_temperature', 'distill_alpha', 'moe_aux_weight')}
+              'distill_temperature', 'distill_alpha')}
     recipe.update(teacher_checkpoint_sha256=(teacher_metadata or {}).get('checkpoint_sha256'),
                   teacher_implementation=(teacher_metadata or {}).get('implementation'))
     recipe.update(precision=precision, device_type=device.type, threads=args.threads)
@@ -272,8 +266,6 @@ def main():
     model.load_state_dict(best['model'])
     if args.implementation == 'student':
         source_paths = [ROOT/'student.py', ROOT/'student_model.py']
-    elif args.implementation == 'student_moe':
-        source_paths = [ROOT/'student_moe.py', ROOT/'moe_model.py', ROOT/'student_model.py']
     else:
         source_paths = [ROOT/'model.py']
     asset_bytes = inference_asset_bytes(model, source_paths) + len(json.dumps(config).encode())
